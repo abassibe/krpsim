@@ -1,132 +1,129 @@
-from random import random
-from string import ascii_letters
+from random import seed, randint, shuffle
 
-choice = lambda x: x[int(random() * len(x))]
-EXPECTED_STR = "Tu ne sais rien Jean Neige."
+seed(None)
 
-CHANCE_TO_MUTATE = 0.1
-GRADED_RETAIN_PERCENT = 0.2
-CHANCE_RETAIN_NONGRATED = 0.05
-POPULATION_COUNT = 100
-GENERATION_COUNT_MAX = 100000
+class Func:
+    def __init__(self, cost=None, reward=None, delay=1):
+        self.cost = cost
+        self.reward = reward
+        self.delay = delay
 
-GRADED_INDIVIDUAL_RETAIN_COUNT = int(POPULATION_COUNT * GRADED_RETAIN_PERCENT)
-LENGTH_OF_EXPECTED_STR = len(EXPECTED_STR)
-MIDDLE_LENGTH_OF_EXPECTED_STR = LENGTH_OF_EXPECTED_STR // 2
-ALLOWED_CHARMAP = ascii_letters + ' .'
-MAXIMUM_FITNESS = LENGTH_OF_EXPECTED_STR
+    def can_process(self, items, amountTime):
+        i = 0
+        tmp = dict(items)
+        while i < amountTime:
+            for key, cost in self.cost.items():
+                if tmp[key] < cost:
+                    return False
+                tmp[key] -= cost
+            for key, reward in self.reward.items():
+                tmp[key] += reward
+            i += 1
+        return True
 
-def get_random_char():
-    """ Return a random char from the allowed charmap. """
-    return choice(ALLOWED_CHARMAP)
+    def processing(self, items, totalCostTime, amountTime):
+        for key, value in self.cost.items():
+            items[key] -= value * amountTime
+        for key, value in self.reward.items():
+            items[key] += value * amountTime
+        totalCostTime += self.delay
+        return totalCostTime
 
-def get_random_individual():
-    """ Create a new random individual. """
-    return [get_random_char() for _ in range(LENGTH_OF_EXPECTED_STR)]
 
-def get_random_population():
-    """ Create a new random population, made of `POPULATION_COUNT` individual. """
-    return [get_random_individual() for _ in range(POPULATION_COUNT)]
+class Individual:
+    def __init__(self, gen):
+        self.items = {'clock': 1,
+                      'second': 0, 
+                      'minute': 0,
+                      'hour': 0,
+                      'day': 0,
+                      'year': 0,
+                      'dream': 0}
+        self.totalCostTime = 0
+        self.gen = list()
+        self.amountGen = randint(gen, gen * 10)
+        self.score = 0
 
-def get_individual_fitness(individual):
-    """ Compute the fitness of the given individual. """
-    fitness = 0
-    for c, expected_c in zip(individual, EXPECTED_STR):
-        if c == expected_c:
-            fitness += 1
-    return fitness
+    def getValidGen(self, item):
+        validGen = []
+        i = 0
+        for func in function:
+            if func.can_process(item, 1):
+                validGen.append(i)
+            i += 1
+        return validGen
 
-def average_population_grade(population):
-    """ Return the average fitness of all individual in the population. """
-    total = 0
-    for individual in population:
-        total += get_individual_fitness(individual)
-    return total / POPULATION_COUNT
+    def getMaxAmount(self, item, func):
+        amount = 0
+        for key, cost in func.cost.items():
+            if key in func.reward:
+                amount = -1
+            else:
+                break
+        if amount == -1:
+            return 255
+        for key, cost in func.cost.items():
+            if item[key] >= cost and amount < item[key] / cost:
+                amount = int(item[key] / cost)
+        return amount
 
-def grade_population(population):
-    """ Grade the population. Return a list of tuple (individual, fitness) sorted from most graded to less graded. """
-    graded_individual = []
-    for individual in population:
-        graded_individual.append((individual, get_individual_fitness(individual)))
-    return sorted(graded_individual, key=lambda x: x[1], reverse=True)
+    def makeGen(self):
+        i = 0
+        tmp = dict(self.items)
+        while i < self.amountGen * 2:
+            if i % 2 == 0:
+                validGen = self.getValidGen(tmp)
+                self.gen.append(validGen[randint(0, len(validGen) - 1)])
+            else:
+                maxAmount = self.getMaxAmount(tmp, function[self.gen[i - 1]])
+                self.gen.append(randint(1, maxAmount))
+                function[self.gen[i - 1]].processing(tmp, 1, self.gen[i])
+            i += 1
 
-def evolve_population(population):
-    """ Make the given population evolving to his next generation. """
- 
-    # Get individual sorted by grade (top first), the average grade and the solution (if any)
-    raw_graded_population = grade_population(population)
-    average_grade = 0
-    solution = []
-    graded_population = []
-    for individual, fitness in raw_graded_population:
-        average_grade += fitness
-        graded_population.append(individual)
-        if fitness == MAXIMUM_FITNESS:
-            solution.append(individual)
-    average_grade /= POPULATION_COUNT
- 
-    # End the script when solution is found
-    if solution:
-        return population, average_grade, solution    
- 
-    # Filter the top graded individuals
-    parents = graded_population[:GRADED_INDIVIDUAL_RETAIN_COUNT]
- 
-    # Randomly add other individuals to promote genetic diversity
-    for individual in graded_population[GRADED_INDIVIDUAL_RETAIN_COUNT:]:
-        if random() < CHANCE_RETAIN_NONGRATED:
-            parents.append(individual)
- 
-    # Mutate some individuals
-    for individual in parents:
-        if random() < CHANCE_TO_MUTATE:
-            place_to_modify = int(random() * LENGTH_OF_EXPECTED_STR)
-            individual[place_to_modify] = get_random_char()
- 
-    # Crossover parents to create children
-    parents_len = len(parents)
-    desired_len = POPULATION_COUNT - parents_len
-    children = []
-    while len(children) < desired_len:
-        father = choice(parents)
-        mother = choice(parents)
-        if True: #father != mother:
-            child = father[:MIDDLE_LENGTH_OF_EXPECTED_STR] + mother[MIDDLE_LENGTH_OF_EXPECTED_STR:]
-            children.append(child)
- 
-    # The next generation is ready
-    parents.extend(children)
-    return parents, average_grade, solution
+    def startProcess(self):
+        i = 0
+        while i < self.amountGen * 2:
+            if function[self.gen[i]].can_process(self.items, self.gen[i + 1]):
+                self.totalCostTime = function[self.gen[i]].processing(self.items, self.totalCostTime, self.gen[i + 1])
+            else:
+                break
+            i += 2
 
-def main():
-    """ Main function. """
- 
-    # Create a population and compute starting grade
-    population = get_random_population()
-    average_grade = average_population_grade(population)
-    print('Starting grade: %.2f' % average_grade, '/ %d' % MAXIMUM_FITNESS)
- 
-    # Make the population evolve
-    i = 0
-    solution = None
-    while not solution and i < GENERATION_COUNT_MAX:
-        population, average_grade, solution = evolve_population(population)
-        if i & 255 == 255:
-            print('Current grade: %.2f' % average_grade, '/ %d' % MAXIMUM_FITNESS, '(%d generation)' % i)
-        i += 1
- 
-    # Print the final stats
-    average_grade = average_population_grade(population)
-    print('Final grade: %.2f' % average_grade, '/ %d' % MAXIMUM_FITNESS)
- 
-    # Print the solution
-    if solution:
-        print('Solution found (%d times) after %d generations.' % (len(solution), i))
-    else:
-        print('No solution found after %d generations.' % i)
-        print('- Last population was:')
-        for number, individual in enumerate(population):
-            print(number, '->',  ''.join(individual))
-        
-if __name__ == '__main__':
-    main()
+    def calculateScore(self):
+        for key, value in self.items.items():
+            if key == 'clock':
+                self.score += value * 1
+            elif key == 'second':
+                self.score += value * 2
+            elif key == 'minute':
+                self.score += value * 3
+            elif key == 'hour':
+                self.score += value * 4
+            elif key == 'day':
+                self.score += value * 5
+            elif key == 'year':
+                self.score += value * 20
+            elif key == 'dream':
+                self.score += value * 10
+
+
+make_sec = Func({'clock': 1}, {'clock': 1, 'second': 1}, 1)
+make_minute = Func({'second': 60}, {'minute': 1}, 6)
+make_hour = Func({'minute': 60}, {'hour': 1}, 36)
+make_day = Func({'hour': 24}, {'day': 1}, 86)
+make_year = Func({'day': 365}, {'year': 1}, 365)
+start_dream = Func({'minute': 1, 'clock': 1}, {'dream': 1}, 60)
+start_dream_2 = Func({'minute': 1, 'dream': 1}, {'dream': 2}, 60)
+dream_minute = Func({'second': 1, 'dream': 1}, {'minute': 1, 'dream': 2}, 1)
+dream_hour = Func({'second': 1, 'dream': 2}, {'hour': 1, 'dream': 2}, 1)
+dream_day = Func({'second': 1, 'dream': 3}, {'day': 1, 'dream': 3}, 1)
+end_dream = Func({'dream': 3}, {'clock': 1}, 60)
+
+function = (make_sec, make_minute, make_hour, make_day, make_year, start_dream, start_dream_2, dream_minute, dream_hour, dream_day, end_dream)
+
+
+test = Individual(11)
+test.makeGen()
+print(test.gen)
+test.startProcess()
+print(test.items)

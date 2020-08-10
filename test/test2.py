@@ -1,7 +1,6 @@
 from random import seed, randint, shuffle
 
 bestDelay = 2147483647
-savePath = list()
 seed(None)
 
 class Func:
@@ -40,7 +39,7 @@ class Individual:
                       'hour': 0,
                       'day': 0,
                       'year': 0,
-                      'dream': 0,}
+                      'dream': 0}
         self.totalCostTime = 0
         self.gen = list()
         self.amountGen = gen
@@ -107,33 +106,57 @@ def meanOfIndividuals(ppls):
     return total / len(ppls)
 
 
+def randomGenSelection(male, female):
+    child = Individual(11)
+    i = 0
+    while i < male.amountGen:
+        p = randint(0, 100)
+        if p < 45:
+            child.gen.append(male.gen[i])
+        elif p < 90:
+            child.gen.append(female.gen[i])
+        else:
+            if i % 2 == 0:
+                child.gen.append()
+        i += 1
+    return child
+
+
 def doSomeSecks(population):
     males = []
     females = []
-    for individuals in population:
-        pass
-        # trier par score le plus élevé
-        # faire 2 liste male/female
-        # les faire se reproduire
-        # remplir les 2/3 de la liste restante (sur 100) avec des mutations et le reste avec de nouveaux individus
- 
+    for individual in population:
+        if len(males) <= len(females):
+            males.append(individual)
+        else:
+            females.append(individual)
+    for male, female in zip(males, females):
+        population.append(randomGenSelection(male, female))
+
 
 ppls = [Individual(11) for _ in range(100)]
+for ppl in ppls:
+    ppl.makeGen()
+    print(ppl.gen)
+    ppl.startProcess()
+    ppl.calculateScore()
+    print(ppl.items)
 while True:
-    for ppl in ppls:
-        ppl.makeGen()
-        print(ppl.gen)
-        ppl.startProcess()
-        ppl.calculateScore()
-        print(ppl.items)
     averageScore = meanOfIndividuals(ppls)
     print(averageScore)
     i = 0
-    while i < len(ppls):
-        if ppls[i].score < averageScore:
-            ppls.remove(ppls[i])
-            continue
-        i += 1
+    # while i < len(ppls):
+    #     if ppls[i].score < averageScore:
+    #         ppls.remove(ppls[i])
+    #         continue
+    #     i += 1
     print("-------------")
+    ppls.sort(key=lambda individual: individual.score, reverse=True)
+    ppls = ppls[:len(ppls) - 50]
+    doSomeSecks(ppls)
     print(ppl.items)
-    break
+    ppls = [Individual(11) for _ in range(100 - len(ppls))]
+    for ppl in ppls:
+        ppl.makeGen()
+        ppl.startProcess()
+        ppl.calculateScore()
