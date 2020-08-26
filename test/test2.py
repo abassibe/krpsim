@@ -1,38 +1,37 @@
-from random import seed, randint, shuffle
+import copy
+import time
+# import pydot
+# import graphviz
 
-bestDelay = 2147483647
-seed(None)
+openList = []
 
+start = time.time()
 class Func:
     def __init__(self, cost=None, reward=None, delay=1):
         self.cost = cost
         self.reward = reward
         self.delay = delay
+        self.score = self.calculateScore()
+        self.rewardOf = [] # Liste des functions qui ont besoin de ce que cette fonction produit
+        self.costOf = [] # Liste des functions qui fournissent ce dont cette fonction a besoin
 
-    def can_process(self, items, amountTime):
-        i = 0
-        tmp = items
-        while i < amountTime:
-            for key, cost in self.cost.items():
-                if tmp[key] < cost:
-                    return False
-                tmp[key] -= cost
-            for key, reward in self.reward.items():
-                tmp[key] += reward
-            i += 1
+    def calculateScore(self):
+        total = 0
+        for cost in self.cost.values():
+            total += cost * self.delay
+        for reward in self.reward.values():
+            total -= reward * self.delay
+        return total
+
+    def canBeComputed(self, items):
+        for key, val in self.cost.items():
+            if not items[key] >= val:
+                return False
         return True
 
-    def processing(self, items, totalCostTime, amountTime):
-        for key, value in self.cost.items():
-            items[key] -= value * amountTime
-        for key, value in self.reward.items():
-            items[key] += value * amountTime
-        totalCostTime += self.delay
-        return totalCostTime
 
-
-class Individual:
-    def __init__(self, gen):
+class potentialPath:
+    def __init__(self):
         self.items = {'clock': 1,
                       'second': 0, 
                       'minute': 0,
@@ -40,49 +39,20 @@ class Individual:
                       'day': 0,
                       'year': 0,
                       'dream': 0}
+        self.callStack = []
+        self.amountCall = []
         self.totalCostTime = 0
-        self.gen = list()
-        self.amountGen = gen
         self.score = 0
 
-    def makeGen(self):
-        i = 0
-        genPool = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        shuffle(genPool)
-        while i < self.amountGen * 2:
-            if i % 2 == 0 and randint(0, 5) != 1:
-                self.gen.append(genPool.pop())
-            elif i % 2 == 1:
-                self.gen.append(randint(1, 255))
-            else:
-                self.gen.append(-1)
-            i += 1
-    
-    def startProcess(self):
-        i = 0
-        while i < self.amountGen * 2:
-            if function[self.gen[i]].can_process(self.items, self.gen[i + 1]):
-                self.totalCostTime = function[self.gen[i]].processing(self.items, self.totalCostTime, self.gen[i + 1])
-            else:
-                break
-            i += 2
+    def updateRessources(self):
+        for func, amount in zip(self.callStack, self.amountCall):
+            for key in func.cost.keys():
+                self.items[key] -= func.cost[key] * amount
+            for key in func.reward.keys():
+                self.items[key] += func.reward[key] * amount
 
-    def calculateScore(self):
-        for key, value in self.items.items():
-            if key == 'clock':
-                self.score += value * 1
-            elif key == 'second':
-                self.score += value * 2
-            elif key == 'minute':
-                self.score += value * 3
-            elif key == 'hour':
-                self.score += value * 4
-            elif key == 'day':
-                self.score += value * 5
-            elif key == 'year':
-                self.score += value * 20
-            elif key == 'dream':
-                self.score += value * 10
+    def addNode(self, func):
+        self.callStack.append(func)
 
 
 make_sec = Func({'clock': 1}, {'clock': 1, 'second': 1}, 1)
@@ -98,65 +68,126 @@ dream_day = Func({'second': 1, 'dream': 3}, {'day': 1, 'dream': 3}, 1)
 end_dream = Func({'dream': 3}, {'clock': 1}, 60)
 
 function = (make_sec, make_minute, make_hour, make_day, make_year, start_dream, start_dream_2, dream_minute, dream_hour, dream_day, end_dream)
+toOptimize = 'year'
 
-def meanOfIndividuals(ppls):
-    total = 0
-    for ppl in ppls:
-        total += ppl.score
-    return total / len(ppls)
-
-
-def randomGenSelection(male, female):
-    child = Individual(11)
-    i = 0
-    while i < male.amountGen:
-        p = randint(0, 100)
-        if p < 45:
-            child.gen.append(male.gen[i])
-        elif p < 90:
-            child.gen.append(female.gen[i])
-        else:
-            if i % 2 == 0:
-                child.gen.append()
-        i += 1
-    return child
+for func1 in function:
+    for func2 in function:
+        if func1 is func2:
+            continue
+        for reward, cost in zip(func1.reward, func1.cost):
+            if reward in func2.cost and func2 not in func1.rewardOf:
+                func1.rewardOf.append(func2)
+            if cost in func2.reward and func2 not in func1.costOf:
+                func1.costOf.append(func2)
 
 
-def doSomeSecks(population):
-    males = []
-    females = []
-    for individual in population:
-        if len(males) <= len(females):
-            males.append(individual)
-        else:
-            females.append(individual)
-    for male, female in zip(males, females):
-        population.append(randomGenSelection(male, female))
+def searchForAvailableNodes(path):
+    # Faire la recherche de chemin en prenant en compte uniquement le linkage des noeuds (sans notions de couts/recompenses)
+
+firstPath = potentialPath()
+while time.time() < start + 10:
+    searchForAvailableNodes(firstPath)
+
+# graph = pydot.Dot(graph_type='digraph')
+# node1 = pydot.Node("make_sec")
+# node2 = pydot.Node("make_minute")
+# node3 = pydot.Node("make_hour")
+# node4 = pydot.Node("make_day")
+# node5 = pydot.Node("make_year")
+# node6 = pydot.Node("start_dream")
+# node7 = pydot.Node("start_dream_2")
+# node8 = pydot.Node("dream_minute")
+# node9 = pydot.Node("dream_hour")
+# node10 = pydot.Node("dream_day")
+# node11 = pydot.Node("end_dream")
+# graph.add_node(node1)
+# graph.add_node(node2)
+# graph.add_node(node3)
+# graph.add_node(node4)
+# graph.add_node(node5)
+# graph.add_node(node6)
+# graph.add_node(node7)
+# graph.add_node(node8)
+# graph.add_node(node9)
+# graph.add_node(node10)
+# graph.add_node(node11)
+
+# graph.add_edge(pydot.Edge(node1, node2))
+# graph.add_edge(pydot.Edge(node1, node8))
+# graph.add_edge(pydot.Edge(node1, node9))
+# graph.add_edge(pydot.Edge(node1, node10))
+
+# graph.add_edge(pydot.Edge(node2, node3))
+# graph.add_edge(pydot.Edge(node2, node6))
+# graph.add_edge(pydot.Edge(node2, node7))
+
+# graph.add_edge(pydot.Edge(node3, node4))
+
+# graph.add_edge(pydot.Edge(node4, node5))
+
+# graph.add_edge(pydot.Edge(node6, node7))
+# graph.add_edge(pydot.Edge(node6, node8))
+# graph.add_edge(pydot.Edge(node6, node9))
+# graph.add_edge(pydot.Edge(node6, node10))
+# graph.add_edge(pydot.Edge(node6, node11))
+
+# graph.add_edge(pydot.Edge(node7, node8))
+# graph.add_edge(pydot.Edge(node7, node9))
+# graph.add_edge(pydot.Edge(node7, node10))
+# graph.add_edge(pydot.Edge(node7, node11))
+
+# graph.add_edge(pydot.Edge(node8, node3))
+# graph.add_edge(pydot.Edge(node8, node6))
+# graph.add_edge(pydot.Edge(node8, node7))
+# graph.add_edge(pydot.Edge(node8, node9))
+# graph.add_edge(pydot.Edge(node8, node10))
+# graph.add_edge(pydot.Edge(node8, node11))
+
+# graph.add_edge(pydot.Edge(node9, node4))
+# graph.add_edge(pydot.Edge(node9, node7))
+# graph.add_edge(pydot.Edge(node9, node8))
+# graph.add_edge(pydot.Edge(node9, node10))
+# graph.add_edge(pydot.Edge(node9, node11))
+
+# graph.add_edge(pydot.Edge(node10, node5))
+# graph.add_edge(pydot.Edge(node10, node7))
+# graph.add_edge(pydot.Edge(node10, node8))
+# graph.add_edge(pydot.Edge(node10, node9))
+# graph.add_edge(pydot.Edge(node10, node11))
+
+# graph.add_edge(pydot.Edge(node11, node1))
+
+# graph.write_png('test/example2_graph.png')
+
+# def getAvailableNode(actualPath):
+#     validPath = []
+#     for func in function:
+#         isOK = True
+#         for cost in func.cost.keys():
+#             if actualPath.items[cost] > 0:
+#                 continue
+#             else:
+#                 isOK = False
+#                 break
+#         if isOK and func not in actualPath.path:
+#             validPath.append(func)
+#     return validPath
 
 
-ppls = [Individual(11) for _ in range(100)]
-for ppl in ppls:
-    ppl.makeGen()
-    print(ppl.gen)
-    ppl.startProcess()
-    ppl.calculateScore()
-    print(ppl.items)
-while True:
-    averageScore = meanOfIndividuals(ppls)
-    print(averageScore)
-    i = 0
-    # while i < len(ppls):
-    #     if ppls[i].score < averageScore:
-    #         ppls.remove(ppls[i])
-    #         continue
-    #     i += 1
-    print("-------------")
-    ppls.sort(key=lambda individual: individual.score, reverse=True)
-    ppls = ppls[:len(ppls) - 50]
-    doSomeSecks(ppls)
-    print(ppl.items)
-    ppls = [Individual(11) for _ in range(100 - len(ppls))]
-    for ppl in ppls:
-        ppl.makeGen()
-        ppl.startProcess()
-        ppl.calculateScore()
+# def searchPath(actualPath):
+#     tmp = getAvailableNode(actualPath)
+#     for node in tmp:
+#         newPath = copy.copy(actualPath)
+#         newPath.path.append(node)
+#         newPath.updateRessources()
+#         openList.append(newPath)
+#     openList.sort(key=lambda potentialPath: potentialPath.score, reverse=True)
+
+
+# bestPath = []
+# toOptimize = 'year'
+# actualPath = potentialPath()
+# while True:
+#     # getAvailableNode(actualPath)
+#     bestPath.append(searchPath(actualPath))
+#     print(bestPath)
