@@ -4,7 +4,8 @@ class Func:
     def __init__(self, name, cost=None, reward=None, delay=1):
         self.cost = cost
         self.reward = reward
-        self.costByRewards = deepcopy(self.reward)
+        self.rewardsScore = deepcopy(self.reward)
+        self.rewardsScoreWithDelay = deepcopy(self.reward)
         self.delay = int(delay)
         self.name = name
         self.score = self.calculateScore()

@@ -6,6 +6,7 @@ initialStocks = None
 objective = None
 processList = None
 baseStock = {}
+ressources = {}
 
 def initialize(stock, toOptimize, function):
     global initialStocks
@@ -26,30 +27,16 @@ def getAssociatedCostFunction(cost):
             targetedFunc.append(func)
     return targetedFunc
 
-def calculateHeuristic(functions, objectiveQuantity):
-    costTotal = 0
-    bestScore = 999999999
-    toReturn = None
-    for func in functions:
-        for value in func.cost.values():
-            costTotal += value
-            if (costTotal / objectiveQuantity) * func.delay < bestScore:
-                bestScore = (costTotal / objectiveQuantity) * func.delay
-                toReturn = func
-    return toReturn
-
-def searchPath(target, stock):
+def searchPath(target):
     for functions in target:
         targetedFunc = []
         for costs, value in functions.cost.items():
             if costs in baseStock:
                 return
             targetedFunc = getAssociatedCostFunction(costs)
-            if len(targetedFunc) > 1:
-                targetedFunc = [calculateHeuristic(targetedFunc, value)]
-            print(targetedFunc[0].name)
-            stock[costs] += value
-            searchPath(targetedFunc, stock)
+            for func in targetedFunc:
+                ressources[costs].addLink(func)
+            searchPath(targetedFunc)
 
 def clearStock(operateStock):
     for key in baseStock:
@@ -59,8 +46,37 @@ def associateRessource(ressource):
     for key, value in initialStocks.items():
         ressource[key] = Ressource(key, value)
 
+def getlinkedFunctions():
+    for key, value in ressources.items():
+        for func in processList:
+            if key in func.reward:
+                value.addLink(func)
+
+def computScore(tmpStock, key, linked):
+    total = 0
+    for func in processList:
+        for key, rewardValue in func.reward.items():
+            print()
+            for key, costValue in func.cost.items():
+                total += rewardValue / costValue
+    return 0
+
+def calculateHeuristic():
+    tmpProcessList = deepcopy(processList)
+    tmpStock = deepcopy(initialStocks)
+    for key, value in tmpStock.items():
+        if value > 0:
+            tmpStock[key] = 1
+    while len(tmpStock) > 0:
+        for key, value in tmpStock.items():
+            if value <= 0:
+                continue
+            for linked in tmpProcessList:
+                if key in linked.cost and key not in linked.reward:
+                    linked.rewardsScore = computScore(tmpStock, key, linked)
+
 def analyze():
-    ressources = {}
+    global ressources
     associateRessource(ressources)
     objectiveFunction = {}
     operateStock = deepcopy(initialStocks)
@@ -69,11 +85,8 @@ def analyze():
         for func in processList:
             if opti in func.reward:
                 objectiveFunction[func] = deepcopy(operateStock)
-                ressources[opti].addLink(func)
-    for key, value in objectiveFunction.items():
-        searchPath([key], value)
+    getlinkedFunctions()
+    calculateHeuristic()
+    for key in objectiveFunction.keys():
+        searchPath([key])
         # print()
-
-# pour chaque fonctions de objectiveFunction
-# regarder les couts 
-# pour chaque couts regarder les fonctions qui les produisent
