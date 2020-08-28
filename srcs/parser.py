@@ -60,12 +60,15 @@ def getProcess(line, initialStocks, processList):
 def isObjective(line):
     return line.startswith("optimize")
 
-def getObjective(line):
-    global toOptimize
-    toOptimizeTmp = line[line.find("(") + 1:line.find(")")]
-    toOptimize = toOptimizeTmp.split(";")
+def getObjective(line, toOptimize):
+    tmpToOptimize = line[line.find("(") + 1:line.find(")")]
+    tmpToOptimize = tmpToOptimize.split(";")
+    for elem in tmpToOptimize:
+        if elem == 'time':
+            continue
+        toOptimize.append(elem)
 
-def parseFile(data, initialStocks, processList):
+def parseFile(data, initialStocks, processList, toOptimize):
     for line in data:
         if line[0] == "#":
             continue
@@ -74,4 +77,4 @@ def parseFile(data, initialStocks, processList):
         elif isProcess(line):
             getProcess(line, initialStocks, processList)
         elif isObjective(line):
-            getObjective(line)
+            getObjective(line, toOptimize)

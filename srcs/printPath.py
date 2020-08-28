@@ -1,4 +1,4 @@
-import copy
+from copy import deepcopy
 
 cycle = 0
 
@@ -18,7 +18,7 @@ def constructOutput(toExec):
     
 
 def printPath(path, initialStocks):
-    actualStocks = copy.deepcopy(initialStocks)
+    actualStocks = deepcopy(initialStocks)
     toPrint = []
     toExec = []
     tmp = path

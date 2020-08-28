@@ -4,6 +4,9 @@ import time
 from node import Node
 from parser import parseFile
 from printPath import printPath
+from functionHeuristique import initialize, analyze
+from threading import Thread
+import multiprocessing 
 
 startTime = time.time()
 parser = argparse.ArgumentParser(description='Krp', formatter_class=argparse.RawTextHelpFormatter)
@@ -23,6 +26,7 @@ processList = []
 initialStocks = {}
 toOptimize = []
 
+MAX_CPU_THREAD = multiprocessing.cpu_count()
 
 try:
     with open(args.path) as f:
@@ -34,7 +38,7 @@ except:
 
 
 def createNewNode(processToAdd, parent, stock):
-    countReward = 0
+    countReward = 1
     for key, value in processToAdd.reward.items():
         if key in toOptimize:
             continue
@@ -45,33 +49,40 @@ def createNewNode(processToAdd, parent, stock):
     return Node(processToAdd, parent, parentScore + (processToAdd.delay / countReward), stock)
 
 
-def searchValideFunction(stock, firstCall):
-    tmpOpenList = {}
-    for func in processList:
-        if func.canBeComputed(stock):
-            if firstCall and func.name not in tmpOpenList:
-                newNode = createNewNode(func, None, stock)
-                newNode.cumulateDelay = func.delay
-                tmpOpenList[func.name] = newNode
-            elif func.name not in tmpOpenList:
-                tmp = openList[0].cumulateDelay
-                newNode = createNewNode(func, openList[0], openList[0].stocks)
-                newNode.cumulateDelay = tmp + func.delay
-                tmpOpenList[func.name] = newNode
-    nodeToSave = None
-    heurValue = 0
-    for key, value in tmpOpenList.items():
-        if value.heuristique > heurValue:
-            heurValue = value.heuristique
-        if value.parent and key == value.parent.funcToComput.name:
-            nodeToSave = value
-        openList.append(value)
-    if nodeToSave:
-        nodeToSave.heuristique = heurValue + 10
-    if not firstCall:
-        closeList.append(openList.pop(0))
-    openList.sort(key=lambda Node: Node.heuristique)
-    print(end='')
+class coreThread(Thread):
+    def __init__(self, node):
+        Thread.__init__(self)
+        self.node = node
+        self.stock = node.stocks if node else initialStocks
+        self.retValue = []
+
+    def run(self):
+        tmpOpenList = {}
+        for func in processList:
+            if func.canBeComputed(self.stock):
+                if not self.node and func.name not in tmpOpenList:
+                    newNode = createNewNode(func, None, self.stock)
+                    newNode.cumulateDelay = func.delay
+                    tmpOpenList[func.name] = newNode
+                elif func.name not in tmpOpenList:
+                    tmp = self.node.cumulateDelay
+                    newNode = createNewNode(func, self.node, self.node.stocks)
+                    newNode.cumulateDelay = tmp + func.delay
+                    tmpOpenList[func.name] = newNode
+        nodeToSave = None
+        heurValue = 0
+        for key, value in tmpOpenList.items():
+            if value.heuristique > heurValue:
+                heurValue = value.heuristique
+            if value.parent and key == value.parent.funcToComput.name:
+                nodeToSave = value
+            self.retValue.append(value)
+        if nodeToSave:
+            nodeToSave.heuristique = heurValue + 10
+
+    def join(self):
+        Thread.join(self)
+        return self.retValue
 
 
 def sortCloseList():
@@ -82,15 +93,32 @@ def sortCloseList():
 def searchPath():
     global closeList
     while startTime + args.delay > time.time():
+        runningThreads = []
         if len(openList) <= 0:
             break
-        searchValideFunction(openList[0].stocks, False)
+        for i in range(len(openList)):
+            if i > MAX_CPU_THREAD - 1:
+                break
+            runningThreads.append(coreThread(openList[0]))
+            closeList.append(openList.pop(0))
+            runningThreads[i].start()
+        for thread in runningThreads:
+            newNodes = thread.join()
+            for node in newNodes:
+                openList.append(node)
+        openList.sort(key=lambda Node: Node.heuristique)
     sortCloseList()
     printPath(closeList[0], initialStocks)
     print('euro: ' + str(closeList[0].stocks['euro']))
 
 
-parseFile(data, initialStocks, processList)
-searchValideFunction(initialStocks, True)
+parseFile(data, initialStocks, processList, toOptimize)
+initialize(initialStocks, toOptimize, processList)
+analyze()
+start = coreThread(None)
+start.start()
+nodeList = start.join()
+for node in nodeList:
+    openList.append(node)
 openList.sort(key=lambda Node: Node.heuristique)
 searchPath()
