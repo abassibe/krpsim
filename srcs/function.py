@@ -8,17 +8,14 @@ class Func:
         self.rewardsScoreWithDelay = deepcopy(self.reward)
         self.delay = int(delay)
         self.name = name
-        self.score = self.calculateScore()
+        self.score = 0
         self.rewardOf = [] # Liste des functions qui ont besoin de ce que cette fonction produit
         self.costOf = [] # Liste des functions qui fournissent ce dont cette fonction a besoin
 
     def calculateScore(self):
-        total = 0
-        for cost in self.cost.values():
-            total += cost * self.delay
-        for reward in self.reward.values():
-            total -= reward * self.delay
-        return total
+        for reward in self.rewardsScoreWithDelay.values():
+            self.score += reward
+        self.score /= len(self.rewardsScoreWithDelay)
 
     def canBeComputed(self, items):
         for key, val in self.cost.items():

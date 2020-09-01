@@ -30,7 +30,7 @@ def getAssociatedCostFunction(cost):
 def searchPath(target):
     for functions in target:
         targetedFunc = []
-        for costs, value in functions.cost.items():
+        for costs in functions.cost.keys():
             if costs in baseStock:
                 return
             targetedFunc = getAssociatedCostFunction(costs)
@@ -52,28 +52,43 @@ def getlinkedFunctions():
             if key in func.reward:
                 value.addLink(func)
 
-def computScore(tmpStock, key, linked):
-    total = 0
-    for func in processList:
-        for key, rewardValue in func.reward.items():
-            print()
-            for key, costValue in func.cost.items():
-                total += rewardValue / costValue
-    return 0
+def computScore(tmpStock, linked):
+    totalCost = 0
+    for costKey, costValue in linked.cost.items():
+        totalCost += tmpStock[costKey] * costValue
+    totalCost /= len(linked.cost)
+    for keyReward, rewardValue in linked.reward.items():
+        if tmpStock[keyReward] == 0 or keyReward in objective:
+            # total = rewardValue * totalCost
+            total = totalCost / rewardValue
+            tmpStock[keyReward] = total
+        else:
+            total = tmpStock[keyReward]
+        linked.rewardsScore[keyReward] = total
+        linked.rewardsScoreWithDelay[keyReward] = total * linked.delay
+        linked.calculateScore()
+
+def isScored():
+    for process in processList:
+        if process.score == 0:
+            return False
+    return True
+
+def canBeScored(func, tmpStock):
+    for cost in func.cost.keys():
+        if tmpStock[cost] == 0:
+            return False
+    return True
 
 def calculateHeuristic():
-    tmpProcessList = deepcopy(processList)
     tmpStock = deepcopy(initialStocks)
     for key, value in tmpStock.items():
         if value > 0:
             tmpStock[key] = 1
-    while len(tmpStock) > 0:
-        for key, value in tmpStock.items():
-            if value <= 0:
-                continue
-            for linked in tmpProcessList:
-                if key in linked.cost and key not in linked.reward:
-                    linked.rewardsScore = computScore(tmpStock, key, linked)
+    while not isScored():
+        for func in processList:
+            if canBeScored(func, tmpStock):
+                computScore(tmpStock, func)
 
 def analyze():
     global ressources
@@ -89,4 +104,4 @@ def analyze():
     calculateHeuristic()
     for key in objectiveFunction.keys():
         searchPath([key])
-        # print()
+    return ressources
