@@ -27,16 +27,16 @@ def getAssociatedCostFunction(cost):
             targetedFunc.append(func)
     return targetedFunc
 
-def searchPath(target):
-    for functions in target:
-        targetedFunc = []
-        for costs in functions.cost.keys():
-            if costs in baseStock:
-                return
-            targetedFunc = getAssociatedCostFunction(costs)
-            for func in targetedFunc:
-                ressources[costs].addLink(func)
-            searchPath(targetedFunc)
+# def onSaitPas(target):
+#     for functions in target:
+#         targetedFunc = []
+#         for costs in functions.cost.keys():
+#             if costs in baseStock:
+#                 return
+#             targetedFunc = getAssociatedCostFunction(costs)
+#             for func in targetedFunc:
+#                 ressources[costs].addLink(func)
+#             onSaitPas(targetedFunc)
 
 def clearStock(operateStock):
     for key in baseStock:
@@ -102,6 +102,6 @@ def analyze():
                 objectiveFunction[func] = deepcopy(operateStock)
     getlinkedFunctions()
     calculateHeuristic()
-    for key in objectiveFunction.keys():
-        searchPath([key])
+    # for key in objectiveFunction.keys():
+    #     onSaitPas([key])
     return ressources

@@ -17,9 +17,21 @@ class Func:
             self.score += reward
         self.score /= len(self.rewardsScoreWithDelay)
 
+
     def canBeComputed(self, items):
         for key, val in self.cost.items():
             if not items[key] >= val:
+                return False
+        return True
+
+    def canBeComputedNTimes(self, items, quantity):
+        tmpStock = deepcopy(items)
+        for key, value in self.cost.items():
+            tmpStock[key] -= value * quantity
+        for key, value in self.reward.items():
+            tmpStock[key] += value * quantity
+        for val in tmpStock.values():
+            if val < 0:
                 return False
         return True
 
