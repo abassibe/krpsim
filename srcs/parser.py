@@ -1,6 +1,8 @@
 import re
 from function import Func
 
+isTimed = False
+
 def isStock(line):
     pattern = re.compile(r"^(\w+):\d+")
     return re.match(pattern, line)
@@ -61,10 +63,12 @@ def isObjective(line):
     return line.startswith("optimize")
 
 def getObjective(line, toOptimize):
+    global isTimed
     tmpToOptimize = line[line.find("(") + 1:line.find(")")]
     tmpToOptimize = tmpToOptimize.split(";")
     for elem in tmpToOptimize:
         if elem == 'time':
+            isTimed = True
             continue
         toOptimize.append(elem)
 
@@ -78,3 +82,6 @@ def parseFile(data, initialStocks, processList, toOptimize):
             getProcess(line, initialStocks, processList)
         elif isObjective(line):
             getObjective(line, toOptimize)
+
+def isTime():
+    return isTimed

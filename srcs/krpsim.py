@@ -1,15 +1,14 @@
-import sys
 import argparse
-import time
-from node import Node
-from parser import parseFile
+import multiprocessing
+from copy import deepcopy
+from time import time
+from threading import Thread
+from math import ceil
+from parser import parseFile, isTime
 from printPath import printPath
 from functionHeuristique import initialize, analyze
-from math import ceil
-from threading import Thread
-import multiprocessing 
 
-startTime = time.time()
+startTime = time()
 parser = argparse.ArgumentParser(description='Krp', formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("-p", "--path", required=True, type=str, help="Path to the process to optimize.")
 parser.add_argument("-d", "--delay", type=int, required=True, help="delay")
@@ -43,11 +42,13 @@ def bestBranch(objectiveFunctions, toOptimize):
     toRet.sort(key=lambda Func: Func.rewardsScore[toOptimize])
     return toRet
 
+
 def requiredRessources(func):
     for costKey, costValue in func.cost.items():
-        if initialStocks[costKey] < costValue:
+        if updatedStock[costKey] < costValue:
             return False
     return True
+
 
 def appendBestFunc(linkedFunction):
     toRet = None
@@ -57,40 +58,73 @@ def appendBestFunc(linkedFunction):
     return toRet
 
 
+def isClosedPath(closeList, toSearch):
+    for openPath in toSearch:
+        if openPath not in closeList:
+            return openPath
+    return None
+
+
+def isStockLeft():
+    for stockKey, stockValue in updatedStock.items():
+        if stockKey == toOptimize[0]:
+            continue
+        if stockValue > 0:
+            return True
+    return False
+
+
 def searchPath(ressources, toProduce, stackOfPath, amountToProduce):
     if toProduce == toOptimize[0] and amountToProduce > 0:
         return
     toSearch = bestBranch(ressources[toProduce], toProduce)
     if len(toSearch) < 1:
         return
-    toExec = toSearch[0]
-    execCount = ceil((amountToProduce - initialStocks[toProduce]) / toExec.reward[toProduce])
+    toExec = None
+    if len(closeList) > 0:
+        toExec = isClosedPath(closeList, toSearch)
+    else:
+        toExec = toSearch[0]
+    if not toExec:
+        return False
+    closeList.append(toExec)
+    execCount = ceil((amountToProduce - updatedStock[toProduce]) / toExec.reward[toProduce])
     if execCount < 1:
         execCount = 1
-    if not toExec.canBeComputedNTimes(initialStocks, execCount):
+    if not toExec.canBeComputedNTimes(updatedStock, execCount):
         for ressourcesName, ressourcesNeeded in toExec.cost.items():
             if ressourcesName in toExec.reward and toExec.reward[ressourcesName] == ressourcesNeeded:
                 continue
-            if not initialStocks[ressourcesName] >= ressourcesNeeded * execCount:
-                searchPath(ressources, ressourcesName, stackOfPath, ressourcesNeeded * execCount)
-    if toExec.canBeComputedNTimes(initialStocks, execCount):
-        tmp = toSearch.pop(0)
+            if not updatedStock[ressourcesName] >= ressourcesNeeded * execCount:
+                if not searchPath(ressources, ressourcesName, stackOfPath, ressourcesNeeded * execCount):
+                    return False
+                break
+        if isTime() and isStockLeft():
+            searchPath(ressources, ressourcesName, stackOfPath, ressourcesNeeded * execCount)
+    else:
         for i in range(execCount):
-            toExec.compute(initialStocks)
-            # print(tmp.name)
-            stackOfPath.append(tmp)
- 
+            toExec.compute(updatedStock)
+            stackOfPath.append(toExec)
+        toSearch.remove(toExec)
+    return True
 
+
+closeList = []
 parseFile(data, initialStocks, processList, toOptimize)
 initialize(initialStocks, toOptimize, processList)
+updatedStock = deepcopy(initialStocks)
 ressources = analyze()
 stackOfPath = []
-while startTime + args.delay > time.time():
-    searchPath(ressources, toOptimize[0], stackOfPath, -1)
+while startTime + args.delay > time():
+    if not searchPath(ressources, toOptimize[0], stackOfPath, -1):
+        printPath(stackOfPath, initialStocks)
+        break
     if len(stackOfPath) == 0:
         break
-    for path in stackOfPath:
-        print(path.name)
-    stackOfPath.clear()
-    # exit()
-print(initialStocks)
+    if len(stackOfPath) > 1000:
+        printPath(stackOfPath, initialStocks)
+        stackOfPath.clear()
+    closeList.clear()
+if len(stackOfPath) > 0:
+    printPath(stackOfPath, initialStocks)
+print(updatedStock)

@@ -7,43 +7,31 @@ def constructOutput(toExec):
     output = ""
     tmpCycle = 0
 
+    if len(toExec) < 1:
+        return ''
     for node in toExec:
-        output += node.funcToComput.name
+        output += node.name
         output += ':'
-        if node.funcToComput.delay > tmpCycle:
-            tmpCycle = node.funcToComput.delay
+        if node.delay > tmpCycle:
+            tmpCycle = node.delay
     output = output[:-1]
     cycle += tmpCycle
-    return f"{cycle}:{output}"
+    return f"{cycle}:{output}\n"
     
 
-def printPath(path, initialStocks):
-    actualStocks = deepcopy(initialStocks)
-    toPrint = []
-    toExec = []
-    tmp = path
-    i = 0
-
-    while tmp.parent:
-        toPrint.append(tmp)
-        tmp = tmp.parent
-
-    toPrint.append(tmp)
-    toPrint.reverse()
-    
-    while i < len(toPrint):
-        if toPrint[i].funcToComput.canBeComputed(actualStocks):
-            save = toPrint.pop(i)
-            for key, value in save.funcToComput.cost.items():
-                actualStocks[key] -= value
-            toExec.append(save)
-            i -= 1
-        if len(toExec) > 0 and i + 1 == len(toPrint):    
-            for node in toExec:
-                for key, value in node.funcToComput.reward.items():
-                    actualStocks[key] += value
-            print(constructOutput(toExec))
-            toExec.clear()
-            i = 0
-        else:
-            i += 1
+def printPath(stackOfPath, stocks):
+    toComput = []
+    listOfIndex = []
+    toPrint = ""
+    while len(stackOfPath) > 0:
+        for i, path in enumerate(stackOfPath):
+            if path.canBeComputed(stocks):
+                path.computeCost(stocks)
+                toComput.append(path)
+                listOfIndex.append(i)
+        toPrint += constructOutput(toComput)
+        for pathToComput in toComput:
+            pathToComput.computeReward(stocks)
+            stackOfPath.pop(listOfIndex.pop())
+        toComput.clear()
+    print(toPrint, end='')

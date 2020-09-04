@@ -27,17 +27,6 @@ def getAssociatedCostFunction(cost):
             targetedFunc.append(func)
     return targetedFunc
 
-# def onSaitPas(target):
-#     for functions in target:
-#         targetedFunc = []
-#         for costs in functions.cost.keys():
-#             if costs in baseStock:
-#                 return
-#             targetedFunc = getAssociatedCostFunction(costs)
-#             for func in targetedFunc:
-#                 ressources[costs].addLink(func)
-#             onSaitPas(targetedFunc)
-
 def clearStock(operateStock):
     for key in baseStock:
         operateStock[key] = 0
@@ -58,12 +47,14 @@ def computScore(tmpStock, linked):
         totalCost += tmpStock[costKey] * costValue
     totalCost /= len(linked.cost)
     for keyReward, rewardValue in linked.reward.items():
+        total = totalCost / rewardValue
         if tmpStock[keyReward] == 0 or keyReward in objective:
-            # total = rewardValue * totalCost
             total = totalCost / rewardValue
             tmpStock[keyReward] = total
         else:
             total = tmpStock[keyReward]
+        if keyReward in linked.cost and rewardValue < linked.cost[keyReward]:
+            total = 999999999
         linked.rewardsScore[keyReward] = total
         linked.rewardsScoreWithDelay[keyReward] = total * linked.delay
         linked.calculateScore()
@@ -102,6 +93,4 @@ def analyze():
                 objectiveFunction[func] = deepcopy(operateStock)
     getlinkedFunctions()
     calculateHeuristic()
-    # for key in objectiveFunction.keys():
-    #     onSaitPas([key])
     return ressources
