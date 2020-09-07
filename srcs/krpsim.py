@@ -106,23 +106,39 @@ def searchPath(ressources, toProduce, stackOfPath, amountToProduce):
 
 
 closeList = []
-parseFile(data, initialStocks, processList, toOptimize)
-initialize(initialStocks, toOptimize, processList)
-updatedStock = deepcopy(initialStocks)
-ressources = analyze()
-stackOfPath = []
-while startTime + args.delay > time():
-    if not searchPath(ressources, toOptimize[0], stackOfPath, -1):
+if parseFile(data, initialStocks, processList, toOptimize):
+    initialize(initialStocks, toOptimize, processList)
+    updatedStock = deepcopy(initialStocks)
+    ressources = analyze()
+    stackOfPath = []
+
+    while startTime + args.delay > time():
+        if not searchPath(ressources, toOptimize[0], stackOfPath, -1):
+            printPath(stackOfPath, initialStocks)
+            break
+        if len(stackOfPath) == 0:
+            break
+        if len(stackOfPath) > 1000:
+            printPath(stackOfPath, initialStocks)
+            stackOfPath.clear()
+        closeList.clear()
+        if len(stackOfPath) > 0:
+            printPath(stackOfPath, initialStocks)
+            break
+        if len(stackOfPath) == 0:
+            break
+        if len(stackOfPath) > 1000:
+            printPath(stackOfPath, initialStocks)
+            stackOfPath.clear()
+        closeList.clear()
+
+    if len(stackOfPath) > 0:
         printPath(stackOfPath, initialStocks)
-        break
-    if len(stackOfPath) == 0:
-        break
-    if len(stackOfPath) > 1000:
-        printPath(stackOfPath, initialStocks)
-        stackOfPath.clear()
-    closeList.clear()
-if len(stackOfPath) > 0:
-    printPath(stackOfPath, initialStocks)
-print('\nState of stock after ' + str(args.delay) + ' secondes')
-for stockKey, stockValue in updatedStock.items():
-    print(stockKey + ': ' + f'{stockValue:,}')
+
+    print('\nState of stock after ' + str(args.delay) + ' secondes')
+    
+    for stockKey, stockValue in updatedStock.items():
+        print(stockKey + ': ' + f'{stockValue:,}')
+        print(updatedStock)
+else:
+    print("ERROR")

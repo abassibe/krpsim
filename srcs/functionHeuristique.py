@@ -80,6 +80,7 @@ def calculateHeuristic():
         for func in processList:
             if canBeScored(func, tmpStock):
                 computScore(tmpStock, func)
+# Attention malformed stocks probleme sur do_shit
 
 def analyze():
     global ressources

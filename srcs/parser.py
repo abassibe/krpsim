@@ -4,7 +4,7 @@ from function import Func
 isTimed = False
 
 def isStock(line):
-    pattern = re.compile(r"^(\w+):\d+")
+    pattern = re.compile(r"^(\w+):\d+$")
     return re.match(pattern, line)
 
 def isProcess(line):
@@ -21,9 +21,12 @@ def splitStock(stock):
     return stock[0], stock[1]
 
 def getStock(line, stocks, processList):
-    stockName, quantity = splitStock(line)
-    if stockName and quantity:
-        stocks[stockName] = int(quantity)
+    if isStock(line):
+        stockName, quantity = splitStock(line)
+        if stockName and quantity:
+            stocks[stockName] = int(quantity)
+            return True
+    return False
 
 def splitProcess(line):
     name = line[:line.find(":")]
@@ -48,40 +51,60 @@ def splitProcess(line):
     
     return name, costsDict, rewardsDict, delay
 
-def getProcess(line, initialStocks, processList):
-    processName, costs, rewards, delay = splitProcess(line)
-    for key in costs.keys():
-        if key not in initialStocks:
-            initialStocks[key] = 0
-    for key in rewards.keys():
-        if key not in initialStocks:
-            initialStocks[key] = 0
-    processList.append(Func(processName, costs, rewards, delay))
+def getProcess(line, stocks, processList):
+    if isProcess(line):
+        processName, costs, rewards, delay = splitProcess(line)
+        for key in costs.keys():
+            if key not in stocks:
+                stocks[key] = 0
+        for key in rewards.keys():
+            if key not in stocks:
+                stocks[key] = 0
+        processList.append(Func(processName, costs, rewards, delay))
+        return True
+    return False
 
 
 def isObjective(line):
     return line.startswith("optimize")
 
+
 def getObjective(line, toOptimize):
     global isTimed
-    tmpToOptimize = line[line.find("(") + 1:line.find(")")]
-    tmpToOptimize = tmpToOptimize.split(";")
-    for elem in tmpToOptimize:
-        if elem == 'time':
-            isTimed = True
-            continue
-        toOptimize.append(elem)
+    if isObjective(line):
+        tmpToOptimize = line[line.find("(") + 1:line.find(")")]
+        tmpToOptimize = tmpToOptimize.split(";")
+        for elem in tmpToOptimize:
+            if elem == 'time':
+                isTimed = True
+                continue
+            toOptimize.append(elem)
+        return len(toOptimize) > 0 
+    return False
 
-def parseFile(data, initialStocks, processList, toOptimize):
+
+def functionTable(stocks, processList, toOptimize, index, line):
+    if index == 0:
+        index += (not getStock(line, stocks, processList))
+    if index == 1:
+        index += (not getProcess(line, stocks, processList))
+    if index == 2:
+        index += (getObjective(line, toOptimize))
+    return index
+
+def didParsingSucceed(index, stocks, processList, toOptimize):
+    return index == 3 and len(stocks) and len(processList) and len(toOptimize) 
+
+def parseFile(data, stocks, processList, toOptimize):
+    index = 0
     for line in data:
+        if not line:
+            return didParsingSucceed(index, stocks, processList, toOptimize)
         if line[0] == "#":
             continue
-        if isStock(line):
-            getStock(line, initialStocks, processList)
-        elif isProcess(line):
-            getProcess(line, initialStocks, processList)
-        elif isObjective(line):
-            getObjective(line, toOptimize)
+        index = functionTable(stocks, processList, toOptimize, index, line)
+    return didParsingSucceed(index, stocks, processList, toOptimize)
+
 
 def isTime():
     return isTimed
