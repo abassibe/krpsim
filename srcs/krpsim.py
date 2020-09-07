@@ -1,32 +1,28 @@
 import argparse
-import multiprocessing
 from copy import deepcopy
 from time import time
-from threading import Thread
 from math import ceil
 from parser import parseFile, isTime
 from printPath import printPath
 from functionHeuristique import initialize, analyze
 
 startTime = time()
-parser = argparse.ArgumentParser(description='Krp', formatter_class=argparse.RawTextHelpFormatter)
+parser = argparse.ArgumentParser(description='Krpsim', formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("-p", "--path", required=True, type=str, help="Path to the process to optimize.")
-parser.add_argument("-d", "--delay", type=int, required=True, help="delay")
+parser.add_argument("-d", "--delay", required=True, type=int, help="Delay")
 
 args = parser.parse_args()
 
 if args.delay < 0:
-    exit("Must be positive.")
+    exit("Delay must be positive.")
 
 data = []
+
 openList = []
 closeList = []
-
 processList = []
 initialStocks = {}
 toOptimize = []
-
-MAX_CPU_THREAD = multiprocessing.cpu_count()
 
 try:
     with open(args.path) as f:
@@ -34,7 +30,7 @@ try:
         for line in lines:
             data.append(line.strip())
 except:
-    exit("Cannot open file.")
+    exit("Process file cannot be opened.")
 
 
 def bestBranch(objectiveFunctions, toOptimize):
@@ -127,4 +123,6 @@ while startTime + args.delay > time():
     closeList.clear()
 if len(stackOfPath) > 0:
     printPath(stackOfPath, initialStocks)
-print(updatedStock)
+print('\nState of stock after ' + str(args.delay) + ' secondes')
+for stockKey, stockValue in updatedStock.items():
+    print(stockKey + ': ' + f'{stockValue:,}')
