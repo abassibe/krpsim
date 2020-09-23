@@ -82,14 +82,18 @@ def isProcessUseless():
 def calculateHeuristic():
     tmpStock = deepcopy(initialStocks)
     isProcessUseless()
+    maxCheckScored = 0
     for key, value in tmpStock.items():
         if value > 0:
             tmpStock[key] = 1
     
     while not isScored():
+        if maxCheckScored >= len(processList):
+            break
         for func in processList:
             if canBeScored(func, tmpStock):
                 computScore(tmpStock, func)
+        maxCheckScored += 1
 
 
 def analyze():

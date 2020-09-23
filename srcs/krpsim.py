@@ -123,7 +123,7 @@ if parseFile(data, initialStocks, processList, toOptimize):
         closeList.clear()
     if len(stackOfPath) > 0:
         printPath(stackOfPath, initialStocks)
-    print('\nState of stock after ' + str(args.delay) + ' secondes')
+    print('\nState of stock after ~' + str(args.delay) + ' secondes')
     for stockKey, stockValue in updatedStock.items():
         print(stockKey + ': ' + f'{stockValue:,}')
 else:
