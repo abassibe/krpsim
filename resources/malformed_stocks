@@ -3,7 +3,7 @@
 #
 # stock      name:quantity
 planche:7
-do_shit:(djdjdj:1):(skjskjs:2):20
+manger:(bonbon:1):20
 #
 # process   name:(need1:qty1;need2:qty2;[...]):(result1:qty1;result2:qty2;[...]):delay
 #

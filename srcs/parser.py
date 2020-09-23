@@ -4,13 +4,13 @@ from function import Func
 isTimed = False
 
 def isStock(line):
-    pattern = re.compile(r"^(\w+):\d+$")
+    pattern = re.compile(r"^\w+:\d+$")
     return re.match(pattern, line)
 
 def isProcess(line):
     if line.startswith("optimize"):
         return None
-    pattern = re.compile(r"^(\w+):\(")
+    pattern = re.compile(r"^\w+:\(((\w+|\d+):\d+;?)+\)")
     return re.match(pattern, line)
 
 
@@ -28,10 +28,17 @@ def getStock(line, stocks, processList):
             return True
     return False
 
+
+def areRewardsEmpty(line, costs, rewards):
+    return costs == rewards and re.match(r"^\w+:\((\w+|\d+:\d+)\):\d+$", line)
+
 def splitProcess(line):
     name = line[:line.find(":")]
     delay = line[line.rfind(":") + 1:]
     
+    if not delay.isdigit():
+        exit()
+
     costs = line[line.find("(") + 1:line.find(")")]
     rewards = line[line.rfind("(") + 1:line.rfind(")")]
 
@@ -43,11 +50,13 @@ def splitProcess(line):
     
     for cost in realCosts:
         costName, quantity = tuple(cost.split(":"))
-        costsDict[costName] = int(quantity)
-    
-    for reward in realRewards:
-        rewardName, quantity = tuple(reward.split(":"))
-        rewardsDict[rewardName] = int(quantity)
+        costsDict[costName] = int(quantity)    
+    # if areRewardsEmpty(line, costs, rewards):
+    #     rewardsDict["rien"] = 0
+    else:
+        for reward in realRewards:
+            rewardName, quantity = tuple(reward.split(":"))
+            rewardsDict[rewardName] = int(quantity)
     
     return name, costsDict, rewardsDict, delay
 

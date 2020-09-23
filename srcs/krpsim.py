@@ -122,15 +122,6 @@ if parseFile(data, initialStocks, processList, toOptimize):
             printPath(stackOfPath, initialStocks)
             stackOfPath.clear()
         closeList.clear()
-        if len(stackOfPath) > 0:
-            printPath(stackOfPath, initialStocks)
-            break
-        if len(stackOfPath) == 0:
-            break
-        if len(stackOfPath) > 1000:
-            printPath(stackOfPath, initialStocks)
-            stackOfPath.clear()
-        closeList.clear()
 
     if len(stackOfPath) > 0:
         printPath(stackOfPath, initialStocks)
@@ -139,6 +130,5 @@ if parseFile(data, initialStocks, processList, toOptimize):
     
     for stockKey, stockValue in updatedStock.items():
         print(stockKey + ': ' + f'{stockValue:,}')
-        print(updatedStock)
 else:
     print("ERROR")
