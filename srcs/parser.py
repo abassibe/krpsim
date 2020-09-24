@@ -31,7 +31,13 @@ def getStock(line, stocks, processList):
 def splitProcess(line):
     name = line[:line.find(":")]
     delay = line[line.rfind(":") + 1:]
-    
+    try:
+        delay = int(delay)
+    except:
+        exit()
+    if delay == '':
+        exit()
+
     costs = line[line.find("(") + 1:line.find(")")]
     rewards = line[line.rfind("(") + 1:line.rfind(")")]
 
@@ -53,7 +59,10 @@ def splitProcess(line):
 
 def getProcess(line, stocks, processList):
     if isProcess(line):
-        processName, costs, rewards, delay = splitProcess(line)
+        try:
+            processName, costs, rewards, delay = splitProcess(line)
+        except:
+            exit("Malformed input file at line: " + line)
         for key in costs.keys():
             if key not in stocks:
                 stocks[key] = 0
@@ -86,12 +95,12 @@ def getObjective(line, toOptimize):
 def functionTable(stocks, processList, toOptimize, index, line):
     if index == 0:
         index += (not getStock(line, stocks, processList))
-        if not isStock(line):
+        if index > 0 and not isProcess(line):
             print("ERROR")
             exit(0)
     if index == 1:
         index += (not getProcess(line, stocks, processList))
-        if not isObjective(line):
+        if index > 1 and not isObjective(line):
             print("ERROR")
             exit(0)
     if index == 2:

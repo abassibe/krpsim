@@ -47,6 +47,8 @@ def parseLine(line, functions, localCycle):
     except:
         print("Error: output file wrongly formated.")
         exit()
+    if actualFileCycle == 730:
+        print()
     for func in splitedLine:
         try:
             currentFunc = functions[func]
@@ -74,6 +76,8 @@ functions = funcDictionaryBuild()
 localCycle = 0
 for line in output:
     if len(line) == 0:
+        continue
+    if line.startswith('State of stock after'):
         break
     localCycle = parseLine(line, functions, localCycle)
 print('This output is correct.')
